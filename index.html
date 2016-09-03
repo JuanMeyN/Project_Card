@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Codename Elementals</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+  <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  <script src="Script/account.js"></script>
+  <script>
+
+//Object
+	
+	
+	$(function () {
+	  $('[data-toggle="popover"]').popover()
+	})
+	
+	function menuDeck(menu) {
+		$(menu).removeClass("hidden");
+		$(".MenuPage").addClass("hidden");
+		
+		if(menu==".DeckPage"){
+			loadDeck();
+		}
+		if(menu==".BossBattlePage"){
+			loadBattle();
+		}
+	}
+	
+	function returnMenu(menu) {
+		$(".MenuPage").removeClass("hidden");
+		$(menu).addClass("hidden");
+	}
+	
+	function loadDeck(){
+		var cards = account['cards'];
+		var cardscount = account['cardscount'];
+		var battleDeck = account['battledeck'];
+		var battleCounter = 0;
+		var container = $('.deckContainer');
+		var battleDeckContainer = $('.battleDeckContainer');
+		container.empty();
+		battleDeckContainer.empty();
+
+		for(var i=0;i<cardscount;i++){
+		
+			card = cards[i];
+			var deck = $(document.createElement( "span" ));
+			deck.css('width','50px').css('height','75px').css('margin','2px');
+			deck.attr('data-html', 'true');
+			deck.attr('title', card['name']);
+			deck.attr('data-content', 
+				"<img src=" + card['image'] + " style='width:250px' />" + " <br/>" +
+				"HP : " + card['hp'] + " <br/>" +
+				"Attack : " + card['attack'] + " <br/>" +
+				"Element : " + card['element'] + " <br/>" +
+				"Critical : " + card['critical'] + "%" 
+			);
+			deck.popover({ trigger: "hover" });
+			
+			var thumbnail = document.createElement("IMG");
+			$(thumbnail).css('width','75px').css('height','75px');
+			thumbnail.src = card['thumbnail'];
+			
+			deck.append(thumbnail);
+			container.append(deck);
+			
+			if(battleDeck[battleCounter] == card['id']){
+				var deck = $(document.createElement( "span" ));
+				deck.css('width','50px').css('height','75px').css('margin','2px');
+				deck.attr('data-html', 'true');
+				deck.attr('title', card['name']);
+				deck.attr('data-content', 
+					"<img src=" + card['image'] + " style='width:250px' />" + " <br/>" +
+					"HP : " + card['hp'] + " <br/>" +
+					"Attack : " + card['attack'] + " <br/>" +
+					"Element : " + card['element'] + " <br/>" +
+					"Critical : " + card['critical'] + "%" 
+				);
+				deck.popover({ trigger: "hover" });
+				
+				var thumbnail = document.createElement("IMG");
+				$(thumbnail).css('width','75px').css('height','75px');
+				thumbnail.src = card['thumbnail'];
+				
+				deck.append(thumbnail);
+				battleDeckContainer.append(deck);
+				battleCounter++;
+			}
+			
+		}
+	}
+	
+	function loadBattle(){
+		var cards = account['cards'];
+		var battleDeck = account['battledeck'];
+		var battleCounter = 0;
+		var enemyContainer = $('.EnemyContainer');
+		var battleDeckContainer = $('.UnitContainer');
+		var enemyHP = createHP(enemy['hp'],'350px','progress-bar-danger','enemy','enemy');
+		
+		enemyContainer.empty();
+		battleDeckContainer.empty();
+		var img = document.createElement("IMG");
+		$(img).css('width','150px');
+		img.src = enemy['image'];
+		enemyContainer.append(img);
+		enemyContainer.append(enemyHP);
+		highlightEnemy($(img));
+		
+		for(var i=0;i<battleDeck.length;i++){
+		
+			card = cards[battleDeck[i]];
+			var deckHP = createHP(card['hp'],'100px','progress-bar-success','own',card['id']);
+			var deckMana = createMana('100px',card['id']);
+			var deck = $(document.createElement( "td" ));
+			
+			deck.css('width','150px').css('margin','5px');
+			deck.attr('data-html', 'true');
+			deck.attr('title', card['name']);
+			deck.attr('data-content', 
+				"HP : " + card['hp'] + " <br/>" +
+				"Attack : " + card['attack'] + " <br/>" +
+				"Element : " + card['element'] + " <br/>" +
+				"Critical : " + card['critical'] + "%" 
+			);
+			deck.popover({ trigger: "hover" });
+			
+			var img = document.createElement("IMG");
+			$(img).css('width','100px');
+			img.src = card['image'];
+			
+			
+			deck.append(deckHP);
+			deck.append(deckMana);
+			deck.append(img);
+			
+			
+			deck.append(createSkillButton(card['attack1'],'btn-info',card['id'],Object.keys(card)['12']));
+			deck.append(createSkillButton(card['attack2'],'btn-primary',card['id'],Object.keys(card)['13']));
+			deck.append(createSkillButton(card['s-attack'],'btn-danger',card['id'],Object.keys(card)['14']));
+			
+			battleDeckContainer.append(deck);
+			
+			
+		}
+		
+		BattleTurn = 1;
+		BattleStart(battleDeck,enemy,BattleTurn);
+		
+	}
+	
+	function BattleStart(battleDeck,enemy,turn){
+		//var BattleTurn = turn;
+		var enemyHPBar = $(".hpBar-enemy").attr('aria-valuenow');
+		console.log('Player Actions : '  +playerActions);
+		if(playerActions>=5){
+			BattleTurn+=1;
+			
+			playerActions=0;
+			enableSkillButton(battleDeck);
+			enemyAction(enemy,battleDeck);
+			increaseTurn(BattleTurn);
+		}
+	}
+	
+	function enableSkillButton(battleDeck){
+		for(var i=0;i<battleDeck.length;i++){
+			$('.button-attack1-' + battleDeck[i]).removeAttr('disabled');
+			$('.button-attack2-' + battleDeck[i]).removeAttr('disabled');
+			$('.button-s-attack-' + battleDeck[i]).removeAttr('disabled');
+		}
+	}
+	
+	function increaseTurn(turn){
+		$('.BattleTurn').text('Turn '+turn);
+	}
+	
+	function enemyAction(enemy,battleDeck){
+		for(var i=0;i<3;i++){
+			var x = Math.floor((Math.random() * 5) + 0);
+			var id=battleDeck[x];
+			var target = account['cards'][id];
+			var element = card['element'];
+			var damage = enemy['attack'];
+			var resistance = getResistance(element,target);
+			var damagePercentage = damage * 0.02;
+			var rng = Math.floor((Math.random() * damagePercentage) - damagePercentage/2);
+			var targetHP = $(".hpBar-"+id).attr('aria-valuenow');
+			
+			damage = ((damage + rng) * resistance) - ((damage + rng) * enemy['defence'] / 1000) ; 
+			
+			console.log('Enemy Damage  : ',damage.toFixed(2));
+			targetHP = targetHP - damage;
+
+			changePlayerBar(target,targetHP,id);
+		}
+	}
+	
+	function createHP(hp,size,colour,type,id){
+		var progress = $(document.createElement("div"));
+		var progressbar = $(document.createElement("div"));
+		if(type=="enemy"){
+			//Set to Percentage
+			progress.addClass('progress');
+			progress.css('width', size);
+			
+			progressbar.addClass('progress-bar');
+			progressbar.addClass('hpBar-' + id);
+			progressbar.addClass( colour );
+			progressbar.attr('role', 'progressbar');
+			progressbar.attr('aria-valuenow', hp);
+			progressbar.attr('aria-valuemin', '0');
+			progressbar.attr('aria-valuemax', hp);
+			progressbar.css('width','100%');
+			progressbar.text('100%');
+			
+			progress.append(progressbar);
+		}else if(type=="own"){
+			// Stay with HP number so doesnt change anything
+			progress.addClass('progress');
+			progress.css('width', size);
+			
+			progressbar.addClass('progress-bar');
+			progressbar.addClass('hpBar-' + id);
+			progressbar.addClass( colour );
+			progressbar.attr('role', 'progressbar');
+			progressbar.attr('aria-valuenow', hp);
+			progressbar.attr('aria-valuemin', '0');
+			progressbar.attr('aria-valuemax', hp);
+			progressbar.css('width','100%');
+			progressbar.css('color','black');
+			progressbar.text(hp);
+			
+			progress.append(progressbar);
+		}
+		
+		
+		
+		
+		return progress;
+	}
+	
+	function createMana(size,id){
+		var progress = $(document.createElement("div"));
+		var progressbar = $(document.createElement("div"));
+			progress.addClass('progress');
+			progress.css('width', size);
+			var mana = 0;
+			progressbar.addClass('progress-bar');
+			progressbar.addClass('manaBar-' + id);
+			progressbar.addClass( 'progress-bar-info' );
+			progressbar.attr('role', 'progressbar');
+			progressbar.attr('aria-valuenow', mana);
+			progressbar.attr('aria-valuemin', mana);
+			progressbar.attr('aria-valuemax', 100);
+			progressbar.css('width','0%');
+			progressbar.text('0%');
+			
+			progress.append(progressbar);
+		
+		
+		
+		
+		return progress;
+	}
+	
+	function createSkillButton(skill,type,id,attackType){
+		var button = $(document.createElement("button"));
+		
+		button.addClass('btn');
+		button.addClass( type );
+		button.addClass( 'button-' + attackType + '-' + id );
+		button.css('width', "100px");
+		button.css('height', "25px");
+		button.text(skill);
+		button.attr('onclick','attack('+id+')');
+		//button.attr('disabled','enable');
+		console.log('ConsoleButton : button-' + attackType + '-' + id);
+		return button;
+	}
+	
+	function highlightEnemy(selected){
+		selected.css('border-style','solid');
+	}
+	
+	function attack(id){
+		var battleDeck = account['battledeck'];
+		var card = account['cards'][id];
+		var enemyMaxHP = $(".hpBar-enemy").attr('aria-valuemax');
+		var originHP = $(".hpBar-enemy").attr('aria-valuenow');
+		var targetHP = $(".hpBar-enemy").attr('aria-valuenow');
+		var manaSource = $(".manaBar-" + card['id'] ).attr('aria-valuenow');
+		var manaBar = $(".manaBar-" + card['id']);
+		var element = card['element'];
+		var damage = card['attack'];
+		var resistance = getResistance(element,enemy);
+		var damagePercentage = damage * 0.02;
+		var rng = Math.floor((Math.random() * damagePercentage) - damagePercentage/2);
+		
+		damage = ((damage + rng) * resistance) - ((damage + rng) * enemy['defence'] / 1000) ; 
+		
+		console.log('Damage  : ',damage.toFixed(2));
+		manaSource = manaSource * 1 + card['mana'];
+		targetHP = targetHP - damage;
+
+		changeEnemyHPBar(targetHP);
+		changeManaBar(enemyMaxHP,originHP,targetHP,manaSource,manaBar);
+		
+		$('.button-attack1-' + id).attr('disabled','disabled');
+		$('.button-attack2-' + id).attr('disabled','disabled');
+		$('.button-s-attack-' + id).attr('disabled','disabled');
+		
+		playerActions+=1;
+		BattleStart(battleDeck,enemy,BattleTurn);
+	}
+	
+	function changeEnemyHPBar(targetHP){
+		$(".hpBar-enemy").attr('aria-valuenow',targetHP);
+		var percentage = targetHP/enemy['hp'] * 100;
+		$(".hpBar-enemy").text(percentage.toFixed(2)+'%');
+		$(".hpBar-enemy").css('width',percentage.toFixed(2)+'%');
+	}
+	
+	function changePlayerBar(target,targetHP,id){
+		$(".hpBar-" + id).attr('aria-valuenow',targetHP);
+		var percentage = targetHP/target['hp'] * 100;
+		$(".hpBar-" + id).text(targetHP.toFixed(2));
+		$(".hpBar-" + id).css('width',percentage.toFixed(2)+'%');
+	}
+	
+	
+	function changeManaBar(enemyMaxHP,originHP,targetHP,manaSource,manaBar){
+		
+		var percentage = ((originHP - targetHP) / enemyMaxHP) * 100;
+		
+		manaSource = manaSource + percentage;
+		
+		if(manaSource>=100){manaSource=100;}
+		
+		manaBar.attr('aria-valuenow',parseInt(manaSource));
+		manaBar.text(parseInt(manaSource)+'%');
+		manaBar.css('width',parseInt(manaSource)+'%');
+		
+		console.log('Target HP : ',targetHP.toFixed(2));
+		console.log('Origin HP : ',originHP);
+		
+		console.log('Mana Source : ',manaSource.toFixed(2));
+		console.log('Mana Gain : ',percentage.toFixed(2));
+	}
+	
+	function getResistance(element,target){
+		var resistance;
+		
+		if(element=='Water'){resistance = target['waterresist']}
+		if(element=='Fire'){resistance = target['fireresist']}
+		if(element=='Air'){resistance = target['airresist']}
+		if(element=='Lightning'){resistance = target['lightningresist']}
+		if(element=='Light'){resistance = target['lightresist']}
+		if(element=='Dark'){resistance = target['darkresist']}
+		
+		return resistance;
+	}
+	
+</script>
+ <style>
+    /* Remove the navbar's default margin-bottom and rounded borders */
+    .navbar {
+      margin-bottom: 0;
+      border-radius: 0;
+    }
+    
+    /* Set height of the grid so .sidenav can be 100% (adjust as needed) */
+    .row.content {height: 450px}
+    
+    /* Set gray background color and 100% height */
+    .sidenav {
+      padding-top: 20px;
+      background-color: #f1f1f1;
+      height: 100%;
+    }
+    
+    /* Set black background color, white text and some padding */
+    footer {
+      background-color: #555;
+      color: white;
+      padding: 15px;
+    }
+    
+    /* On small screens, set height to 'auto' for sidenav and grid */
+    @media screen and (max-width: 767px) {
+      .sidenav {
+        height: auto;
+        padding: 15px;
+      }
+      .row.content {height:auto;}
+    }
+  </style>
+</head>
+<body onload="">
+
+	<nav class="navbar navbar-inverse">
+	  <div class="container-fluid">
+		<div class="navbar-header">
+		  <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
+			<span class="icon-bar"></span>
+			<span class="icon-bar"></span>
+			<span class="icon-bar"></span>
+		  </button>
+		  <a class="navbar-brand" href="#">Codename Spirits</a>
+		</div>
+		<div class="collapse navbar-collapse" id="myNavbar">
+		  <ul class="nav navbar-nav">
+			<li class="active"><a href="#">Home</a></li>
+			<li><a href="#">About</a></li>
+			<li><a href="#">Projects</a></li>
+			<li><a href="#">Contact</a></li>
+		  </ul>
+		  <ul class="nav navbar-nav navbar-right">
+			<li><a href="#"><span class="glyphicon glyphicon-log-in"></span> Login</a></li>
+		  </ul>
+		</div>
+	  </div>
+	</nav>
+	  
+	<div class="container-fluid text-center">
+	  <div class="row content">
+		<div class="col-sm-10 text-left">
+			<div id="GameCanvas" class="GameCanvas" style="width:720px;height:720px;background:grey;">
+				
+				<center><h1> Codename Spirits</h1></center>
+				
+				<!-- Menu Page -->
+				<div id="MenuPage" class="MenuPage">
+				<center>
+					<button class="btn margin" style="width:150px;height:150px;" onclick="menuDeck('.DeckPage')"> Deck </button>
+					<button class="btn margin" style="width:150px;height:150px;" onclick="menuDeck('.BossBattlePage')"> Boss Battle </button>
+					<button class="btn margin" style="width:150px;height:150px;" onclick="menuDeck('.SummonPage')"> Summon </button>
+				</center>
+				</div>
+				
+				<!-- Deck Page -->
+				<div id="DeckPage" class="DeckPage hidden">
+					<h2> Card Collections </h2>
+					<div class="deckContainer">
+					
+					</div>
+					<h2> Battle Deck </h2>
+					<div class="battleDeckContainer">
+						
+					</div>
+					<button class="btn btn-danger margin" style="position:absolute;bottom:0;" onclick="returnMenu('.DeckPage')"> Back to Menu</button>
+				</div>
+				
+				<!-- Boss Battle Page -->
+				<div id="BossBattlePage" class="BossBattlePage hidden">
+					<h1 class="BattleTurn" style="top:25px;left:25px;position:absolute;"> Turn 1</h1>
+					<center>
+						<div id="EnemyContainer" class="EnemyContainer" style="position:;top:;">
+						
+						</div>
+						<table>
+							<tr id="UnitContainer" class="UnitContainer">
+						
+							</tr>
+						</table>
+					</center>
+					<button class="btn margin" style="position:absolute;top:0;" onclick="returnMenu('.BossBattlePage')"> Back to Menu</button>
+				</div>
+				
+				<!-- Summon Page -->
+				<div id="SummonPage" class="SummonPage hidden">
+					<button class="btn margin" style="width:;height:;" onclick="returnMenu('.SummonPage')"> Back to Menu</button>
+				</div>
+				
+			</div>
+		</div>
+		<div class="col-sm-2 sidenav">
+			
+		  <div class="panel">
+			LOGS
+		  </div>
+		</div>
+	  </div>
+	</div>
+
+</body>
+
+
+
+</html>
+
